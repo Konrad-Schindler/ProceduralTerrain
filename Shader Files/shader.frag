@@ -18,8 +18,10 @@ bool inShadow(vec4 fragPosLightSpace)
 {
 	// move coordinate from [-w, w] -> [-1, 1] -> [0, 1]
 	vec4 fragPos = (fragPosLightSpace / fragPosLightSpace.w + 1) * 0.5;
-	float depthInShadowMap = texture(shadowMap, fragPos.xy).r;
-	return depthInShadowMap < fragPos.z;
+	float shadowBias = 0.005;  
+	float depthInShadowMap = texture(shadowMap, fragPos.xy).r + shadowBias;
+	float fragDepth = fragPos.z;
+	return depthInShadowMap < fragDepth;
 }
 
 void main()
@@ -33,5 +35,5 @@ void main()
 	} else {
 		FragColor *= angle;
 	}
-	FragColor = inShadow(fragPosLightSpace) ? vec4(1, 0, 0, 0) : FragColor;
+	FragColor *= (1 - float(inShadow(fragPosLightSpace)));
 }

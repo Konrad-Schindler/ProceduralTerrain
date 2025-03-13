@@ -49,19 +49,19 @@ void Window::processInput()
 	}
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
 	{
-		camera.forward(deltaTime * 100);
+		camera.forward(deltaTime * 500);
 	}
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
 	{
-		camera.backward(deltaTime * 100);
+		camera.backward(deltaTime * 500);
 	}
     if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
 	{
-		camera.left(deltaTime * 100);
+		camera.left(deltaTime * 500);
 	}
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
 	{
-		camera.right(deltaTime * 100);
+		camera.right(deltaTime * 500);
 	}
 }
 

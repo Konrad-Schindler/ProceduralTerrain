@@ -1,12 +1,14 @@
 #include "Window.hpp"
 #include <glm/vec3.hpp>
+#include <chrono>
 #include <vector>
+
 #include "Shader.hpp"
 #include "glm/glm.hpp"
 #include "Noise.hpp"
 
-float near = 0.1;
-float far = 10000.0;
+float near = 1.0;
+float far = 3000.0;
 void renderQuad();
 struct Mesh {
 	std::vector<glm::vec3> vertices;
@@ -18,6 +20,11 @@ Mesh createTerrainMesh(int width, int length) {
 	Mesh mesh;
 	float maxHeight = 0;
 	float minHeight = 1;
+
+	auto start = std::chrono::high_resolution_clock::now();
+
+	mesh.vertices.reserve(width * length);
+	mesh.indices.reserve(width * length);
 	for (int x = 0; x < width; x++) {
 		for (int z = 0; z < length; z++) {
 			float height = fractionalBrownianMotion(Noise::Perlin, glm::vec2(x, z), 10, 250);
@@ -62,6 +69,10 @@ Mesh createTerrainMesh(int width, int length) {
 
 	mesh.normals = normals;
 
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+	std::cout << "Terrain generation took: " << duration.count() << "ms" << std::endl;
+
 	return mesh;
 }
 
@@ -101,7 +112,7 @@ int main()
 
 	GLuint depthMapFBO;
 	GLuint depthMap;
-	int SHADOW_DIM = 1024;
+	int SHADOW_DIM = 8192;
 	glGenFramebuffers(1, &depthMapFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 
@@ -119,10 +130,10 @@ int main()
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glm::vec3 lightDirection = glm::vec3(-10, -1, 0);
+	glm::vec3 lightDirection = glm::vec3(-5, -4, -3);
 	glm::vec3 middle = glm::vec3(500, 50, 500);
-	glm::vec3 lightPosition = -lightDirection * 50.f + middle;
-	glm::mat4 lightProjection = glm::ortho(-200.0f, 200.0f, -200.0f, 200.0f, near, far);
+	glm::vec3 lightPosition = -lightDirection * 100.f + middle;
+	glm::mat4 lightProjection = glm::ortho(-1000.0f, 1000.0f, -1000.0f, 1000.0f, near, far);
 	glm::mat4 lightView = glm::lookAt(lightPosition, middle, glm::vec3(0, 1, 0));
 
 	window.camera.position = lightPosition;
@@ -173,7 +184,7 @@ int main()
 		debugTexture.uniformFloat("near_plane", near);
 		debugTexture.uniformFloat("far_plane", far);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
-		renderQuad();
+		// renderQuad();
 
 		window.runLoopFunctions();
 	}
