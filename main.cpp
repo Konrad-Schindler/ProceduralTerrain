@@ -6,6 +6,9 @@
 #include "Shader.hpp"
 #include "glm/glm.hpp"
 #include "Noise.hpp"
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 
 float near = 1.0;
 float far = 3000.0;
@@ -27,10 +30,11 @@ Mesh createTerrainMesh(int width, int length) {
 	mesh.indices.reserve(width * length);
 	for (int x = 0; x < width; x++) {
 		for (int z = 0; z < length; z++) {
-			float height = fractionalBrownianMotion(Noise::Perlin, glm::vec2(x, z), 10, 250);
+			float height = fractionalBrownianMotion(Noise::Perlin, glm::vec2(x, z), 10, 1000);
+			height = (height > 0 ? 1 : -1) * std::pow(std::abs(height) * 100, 1.2);
 			if (height > maxHeight) maxHeight = height;
 			if (height < minHeight) minHeight = height;
-			mesh.vertices.push_back(glm::vec3(x, height * 100, z));
+			mesh.vertices.push_back(glm::vec3(x, height, z));
 		}
 	}
 	std::cout << "max: " << maxHeight << ", min: " << minHeight << std::endl;
@@ -82,13 +86,13 @@ int main()
 	if (!window.initialized)
 		return -1;
 
-	Shader shader("C:/Users/Konrad/source/repos/ProceduralTerrain/Shader Files/shader.vert", "C:/Users/Konrad/source/repos/ProceduralTerrain/Shader Files/shader.frag");
-	Shader depthShader("C:/Users/Konrad/source/repos/ProceduralTerrain/Shader Files/depth.vert");
-	Shader debugTexture("C:/Users/Konrad/source/repos/ProceduralTerrain/Shader Files/viewTexture.vert", "C:/Users/Konrad/source/repos/ProceduralTerrain/Shader Files/viewTexture.frag");
+	Shader shader("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/shader.vert", "C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/shader.frag");
+	Shader depthShader("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/depth.vert");
+	Shader debugTexture("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/viewTexture.vert", "C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/viewTexture.frag");
 
-	glm::mat4 projection = glm::perspective((float)glm::radians(45.0), 1.0f, near, far);
+	glm::mat4 projection = glm::perspective((float)glm::radians(80.0), 1.0f, near, far);
 
-	Mesh map = createTerrainMesh(1000, 1000);
+	Mesh map = createTerrainMesh(2000, 2000);
 
 	GLuint VAOs[2];
 	GLuint buffer[3];

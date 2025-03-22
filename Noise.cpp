@@ -58,7 +58,7 @@ static noiseFunctionPtr noiseFunction(Noise noise) {
 // https://iquilezles.org/articles/fbm/
 float fractionalBrownianMotion(Noise noise, glm::vec2 position, int numOctaves, int gridSize)
 {
-    float G = 0.5;  // or make it variable with argument H and G = H^-2
+    float G = 0.55;  // or make it variable with argument H and G = H^-2
     float f = 1.0;
     float a = 1.0;
     float t = 0.0;
