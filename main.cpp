@@ -11,7 +11,8 @@
 #include "backends/imgui_impl_opengl3.h"
 
 float near = 1.0;
-float far = 3000.0;
+float far = 20000.0;
+void renderTriangle();
 void renderQuad();
 struct Mesh {
 	std::vector<glm::vec3> vertices;
@@ -19,7 +20,7 @@ struct Mesh {
 	std::vector<unsigned int> indices;
 };
 
-Mesh createTerrainMesh(int width, int length) {
+Mesh createTerrainMesh(int width, int length, int stepSize) {
 	Mesh mesh;
 	float maxHeight = 0;
 	float minHeight = 1;
@@ -28,8 +29,8 @@ Mesh createTerrainMesh(int width, int length) {
 
 	mesh.vertices.reserve(width * length);
 	mesh.indices.reserve(width * length);
-	for (int x = 0; x < width; x++) {
-		for (int z = 0; z < length; z++) {
+	for (int x = 0; x < width * stepSize; x+=stepSize) {
+		for (int z = 0; z < length * stepSize; z+=stepSize) {
 			float height = fractionalBrownianMotion(Noise::Perlin, glm::vec2(x, z), 10, 1000);
 			height = (height > 0 ? 1 : -1) * std::pow(std::abs(height) * 100, 1.2);
 			if (height > maxHeight) maxHeight = height;
@@ -86,13 +87,29 @@ int main()
 	if (!window.initialized)
 		return -1;
 
-	Shader shader("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/shader.vert", "C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/shader.frag");
-	Shader depthShader("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/depth.vert");
-	Shader debugTexture("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/viewTexture.vert", "C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/viewTexture.frag");
+	Shader shader;
+	shader.vertex("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/shader.vert");
+	shader.tesc("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/tessTest.tesc");
+	shader.tese("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/tessTest.tese");
+	shader.fragment("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/shader.frag");
+	shader.compile();
+	Shader depthShader;
+	depthShader.vertex("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/depth.vert");
+	depthShader.compile();
+	Shader tessTestShader;
+	tessTestShader.vertex("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/tessTest.vert");
+	tessTestShader.fragment("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/tessTest.frag");
+	tessTestShader.tesc("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/tessTest.tesc");
+	tessTestShader.tese("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/tessTest.tese");
+	tessTestShader.compile();
+	Shader debugTexture;
+	debugTexture.vertex("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/viewTexture.vert");
+	debugTexture.fragment("C:/Users/Konrad/source/repos/ProceduralTerrain/shaders/viewTexture.frag");
+	debugTexture.compile();
 
 	glm::mat4 projection = glm::perspective((float)glm::radians(80.0), 1.0f, near, far);
 
-	Mesh map = createTerrainMesh(2000, 2000);
+	Mesh map = createTerrainMesh(1024, 1024, 16);
 
 	GLuint VAOs[2];
 	GLuint buffer[3];
@@ -144,7 +161,8 @@ int main()
 	window.camera.lookAt(middle);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
+	glPatchParameteri(GL_PATCH_VERTICES, 3);
 	glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 	while (!window.shouldClose())
 	{
@@ -182,13 +200,15 @@ int main()
 		shader.uniformBool("stylized", window.debugInformation.stylized);
 
 		glBindTexture(GL_TEXTURE_2D, depthMap);
-		glDrawElements(GL_TRIANGLES, map.indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_PATCHES, map.indices.size(), GL_UNSIGNED_INT, 0);
 
 		debugTexture.use();
 		debugTexture.uniformFloat("near_plane", near);
 		debugTexture.uniformFloat("far_plane", far);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
-		// renderQuad();
+
+		//tessTestShader.use();
+		//renderTriangle();
 
 		window.runLoopFunctions();
 	}
@@ -201,11 +221,11 @@ void renderQuad()
 	if (quadVAO == 0)
 	{
 		float quadVertices[] = {
-			// positions        // texture Coords
-			-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-			-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-			 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-			 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+			// positions       
+			-1.0f,  1.0f, 0.0f,
+			-1.0f, -1.0f, 0.0f,
+			 1.0f,  1.0f, 0.0f,
+			 1.0f, -1.0f, 0.0f,
 		};
 		// setup plane VAO
 		glGenVertexArrays(1, &quadVAO);
@@ -214,11 +234,44 @@ void renderQuad()
 		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	}
 	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glDrawArrays(GL_PATCHES, 0, 4);
+	glBindVertexArray(0);
+}
+
+unsigned int triangleVAO = 0;
+unsigned int triangleVBO[2];
+void renderTriangle()
+{
+	if (triangleVAO == 0)
+	{
+		float triangleVertices[] = {
+			// positions       
+			-0.75f, -0.75f, 0.0f,
+			 0.75f, -0.75f, 0.0f,
+			-0.75f,  0.75f, 0.0f,
+			 0.75f,  0.75f, 0.0f,
+		};
+		GLuint indices[] = {
+			0, 1, 2, 3
+			//0, 2, 3,
+		};
+		glCreateVertexArrays(1, &triangleVAO);
+		glCreateBuffers(2, triangleVBO);
+
+		glNamedBufferStorage(triangleVBO[0], sizeof(triangleVertices), triangleVertices, GL_MAP_READ_BIT);
+		glVertexArrayVertexBuffer(triangleVAO, 0, triangleVBO[0], 0, 3 * sizeof(float));
+		glVertexArrayAttribFormat(triangleVAO, 0, 3, GL_FLOAT, GL_FALSE, 0);
+		glVertexArrayAttribBinding(triangleVAO, 0, 0);
+		glEnableVertexArrayAttrib(triangleVAO, 0);
+
+		glNamedBufferStorage(triangleVBO[1], sizeof(indices), indices, GL_MAP_READ_BIT);
+		glVertexArrayElementBuffer(triangleVAO, triangleVBO[1]);
+
+	}
+	glBindVertexArray(triangleVAO);
+	glDrawElements(GL_PATCHES, 4, GL_UNSIGNED_INT, 0);
 	glBindVertexArray(0);
 }
